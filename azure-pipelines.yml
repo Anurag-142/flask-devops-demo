@@ -1,0 +1,38 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  azureServiceConnection: 'azure-flask-connection'
+  acrName: 'acrflaskdemo18429'
+  acrLoginServer: 'acrflaskdemo18429.azurecr.io'
+  imageRepository: 'flask-devops-demo'
+  imageTag: '$(Build.BuildId)'
+
+stages:
+- stage: Build_And_Push
+  displayName: Build and Push Docker Image
+  jobs:
+  - job: DockerBuildPush
+    displayName: Build and Push to ACR
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: Build and push Docker image to ACR
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az acr login --name $(acrName)
+
+          docker build \
+            -t $(acrLoginServer)/$(imageRepository):$(imageTag) \
+            -t $(acrLoginServer)/$(imageRepository):latest \
+            .
+
+          docker push $(acrLoginServer)/$(imageRepository):$(imageTag)
+          docker push $(acrLoginServer)/$(imageRepository):latest
